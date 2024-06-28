@@ -1,0 +1,72 @@
+Great Leather Tarantula
+
+Medium
+
+# execute_withdraw_fund() Funds arrive at End-Block, so the time judgment should be > instead of >=
+
+## Summary
+`execute_withdraw_fund()` uses `env.block.time>=payout_at` to determine that the funds are in the contract.
+but the funds actual arrival occurs at `End-Block`, so the current time is not yet available.
+
+## Vulnerability Detail
+After `execute_unstake()` we write the `completion_time` to `UNSTAKING_QUEUE`.
+```rust
+    UNSTAKING_QUEUE.push_back(deps.storage, &UnstakingTokens { fund, payout_at })? ;
+```
+When executing `execute_withdraw_fund()`, we use `env.block.time>=payout_at` to determine if the fund has arrived or not
+```rust
+fn execute_withdraw_fund(ctx: ExecuteContext) -> Result<Response, ContractError> {
+...
+        match UNSTAKING_QUEUE.front(deps.storage).unwrap() {
+            Some(UnstakingTokens { payout_at, .. }) if payout_at <= env.block.time => {
+                if let Some(UnstakingTokens { fund, .. }) =
+                    UNSTAKING_QUEUE.pop_front(deps.storage)?
+                {
+```
+
+But with `payout_at == env.block.time`, the funds don't actually get there
+Because the `hooks` are executed at `End-Block` and the funds are only credited to the contract
+https://github.com/cosmos/cosmos-sdk/tree/b03a2c6b0a4ad3794e2d50dd1354c7022cdd5826/x/staking#end-block
+>## End-Block
+>Unbonding Delegations
+>- transfer the balance coins to the delegator's wallet address
+
+## Impact
+1. `execute_withdraw_fund()` may be revert due to insufficient funds, causing `UNSTAKING_QUEUE[0..i]`, which should have succeeded earlier, to fail as well.
+
+2. or there may be other remaining funds (not belonging to this queue) that will be used up
+
+## Code Snippet
+https://github.com/sherlock-audit/2024-05-andromeda-ado/blob/main/andromeda-core/contracts/finance/andromeda-validator-staking/src/contract.rs#L258
+## Tool used
+
+Manual Review
+
+## Recommendation
+```diff
+fn execute_withdraw_fund(ctx: ExecuteContext) -> Result<Response, ContractError> {
+    let ExecuteContext {
+        deps, info, env, ..
+    } = ctx;
+
+    // Ensure sender is the contract owner
+    ensure!(
+        ADOContract::default().is_contract_owner(deps.storage, info.sender.as_str())?,
+        ContractError::Unauthorized {}
+    );
+
+    let mut funds = Vec::<Coin>::new();
+    loop {
+        match UNSTAKING_QUEUE.front(deps.storage).unwrap() {
+-           Some(UnstakingTokens { payout_at, .. }) if payout_at <= env.block.time => {
++           Some(UnstakingTokens { payout_at, .. }) if payout_at < env.block.time => {
+                if let Some(UnstakingTokens { fund, .. }) =
+                    UNSTAKING_QUEUE.pop_front(deps.storage)?
+                {
+                    funds.push(fund)
+                }
+            }
+            _ => break,
+        }
+    }
+```

@@ -1,0 +1,65 @@
+Great Leather Tarantula
+
+Medium
+
+# If WithdrawAddrEnabled = false, execute_claim() will fail
+
+## Summary
+Currently, contracts that execute `execute_claim()` set `DistributionMsg::SetWithdrawAddress` first.
+If `WithdrawAddrEnabled = false`, the execution will not succeed and the `claim` will not be executed.
+
+## Vulnerability Detail
+Currently the contract executes claims rewards by setting `DistributionMsg::SetWithdrawAddress` first.
+```rust
+fn execute_claim(
+    ctx: ExecuteContext,
+    validator: Option<Addr>,
+    recipient: Option<AndrAddr>,
+) -> Result<Response, ContractError> {
+...
+    let res = Response::new()
+@>      .add_message(DistributionMsg::SetWithdrawAddress {
+            address: recipient.to_string(),
+        })
+        .add_message(DistributionMsg::WithdrawDelegatorReward {
+            validator: validator.to_string(),
+        })
+        .add_attribute("action", "validator-claim-reward")
+        .add_attribute("recipient", recipient)
+        .add_attribute("validator", validator.to_string());
+
+    Ok(res)
+}
+```
+
+If the configuration `WithdrawAddrEnabled` is changed to `false`, setting `DistributionMsg::SetWithdrawAddress` will fail!
+This will prevent the execution of the `claim`
+https://github.com/cosmos/cosmos-sdk/tree/main/x/distribution#msgsetwithdrawaddress
+> # MsgSetWithdrawAddress
+>By default, the withdraw address is the delegator address. To change its withdraw address, a delegator must send a MsgSetWithdrawAddress message. Changing the withdraw address is possible **only if the parameter WithdrawAddrEnabled is set to true.**
+```rust
+func (k Keeper) SetWithdrawAddr(ctx context.Context, delegatorAddr sdk.AccAddress, withdrawAddr sdk.AccAddress) error
+ if k.blockedAddrs[withdrawAddr.String()] {
+  fail with "`{withdrawAddr}` is not allowed to receive external funds"
+ }
+
+ if !k.GetWithdrawAddrEnabled(ctx) {
+  fail with `ErrSetWithdrawAddrDisabled`
+ }
+
+ k.SetDelegatorWithdrawAddr(ctx, delegatorAddr, withdrawAddr)
+```
+
+
+
+## Impact
+can't  claim reward
+## Code Snippet
+https://github.com/sherlock-audit/2024-05-andromeda-ado/blob/main/andromeda-core/contracts/finance/andromeda-validator-staking/src/contract.rs#L231
+## Tool used
+
+Manual Review
+
+## Recommendation
+
+when set `DistributionMsg::SetWithdrawAddress` , `SubMsg` using `ReplyOn.Error`, which is ignored when this message returns an error, to avoid the whole `execute_claim` from failing!

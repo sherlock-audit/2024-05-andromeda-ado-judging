@@ -1,0 +1,65 @@
+Radiant Burlap Gibbon
+
+Medium
+
+# Slashing allows users to bypass the lockup period of vestings
+
+## Summary
+
+The vesting module allows owners to create and manage multiple vestings, which can be claimed independently. The vestings are tracked using the `Batch` structure. However, if tokens are staked and the chosen validator is slashed, the protocol does not adjust the `amount` parameter in the `Batch` structure. This oversight allows users to claim the original total amount, even if some tokens were slashed, potentially leading to bypassing the lockup period of other vestings.
+
+## Vulnerability Detail
+
+The vesting module allows the owner to create multiple vestings, which should be claimable independently of each other. The vestings are tracked using the `Batch` structure.
+
+```rust
+pub struct Batch {
+    /// The amount of tokens in the batch
+    pub amount: Uint128,
+    /// The amount of tokens that have been claimed.
+    pub amount_claimed: Uint128,
+    /// When the lockup ends.
+    pub lockup_end: u64,
+    /// How often releases occur.
+    pub release_unit: u64,
+    /// Specifies how much is to be released after each `release_unit`. If
+    /// it is a percentage, it would be the percentage of the original amount.
+    pub release_amount: WithdrawalType,
+    /// The time at which the last claim took place in seconds.
+    pub last_claimed_release_time: u64,
+}
+```
+
+This struct's `amount` parameter tracks the total vesting. The `amount_claimed` increases on every claim until it reaches the `amount`. After that, no more tokens can be claimed. 
+
+The protocol allows the owner/user to stake the tokens while they are vesting. By doing this, users can gain staking rewards while their vesting matures. The rewards can be claimed through the `execute_withdraw_rewards()`. 
+
+The problem is that the chosen validator can be [slashed](https://docs.cosmos.network/main/build/modules/slashing#abstract) while the tokens are staked. If the selected validator is slashed, the tokens delegated to him will also get slashed. The protocol does not account for this, as even if the tokens are slashed, the `amount` of the vesting stays the same. As a result, the user, even after slashing, can claim the total `amount` of the batch. This is fine if only one batch is used, but it leads to issues if multiple batches are used. The slashed user can claim his total amount if multiple batches are used. The difference between his slashed amount and the actual amount will be taken from one of the other batches. This leads to issues if the other issue that the tokens are taken from is still in its lockup period, as this way, tokens will be taken from it before the `lockup_end` has been reached.
+
+### Exemplary Scenario
+
+To showcase this issue, we can use a simple example.
+1. A vesting (`VestingA`) of 100 tokens is generated
+2. The user stakes the tokens of `VestingA`
+3. Another 100 token vesting batch (`VestingB`), which is locked for the next 10 years, gets added
+4. The staked tokens get slashed by 20%
+5. The user unstakes all his tokens again
+6. `VestingA` matures
+7. The user claims the full 100 tokens
+8. There are now only 80 tokens left for `VestingB`
+
+In this case, the user can recoup his slashing losses from a vesting still in lockup. This should never be possible.
+## Impact
+
+The issue results in a slashed user being able to funnel funds from a locked vesting into an unlocked vesting to recoup slashing losses.
+
+## Code Snippet
+
+https://github.com/sherlock-audit/2024-05-andromeda-ado/blob/bbbf73e5d1e4092ab42ce1f827e33759308d3786/andromeda-core/contracts/finance/andromeda-vesting/src/state.rs#L14-L28
+## Tool used
+
+Manual Review
+
+## Recommendation
+
+We recommend adapting the `amount` parameter of the `Batch` struct if the un-staked tokens are less than the staked ones. This mitigation is crucial as it ensures accurate accounting for slashing, thereby preventing the potential loss of tokens.
