@@ -1,6 +1,6 @@
 Great Leather Tarantula
 
-High
+high
 
 # when a validator is kicked out of the bonded validator set ,unstake funds will remain in the contract
 
