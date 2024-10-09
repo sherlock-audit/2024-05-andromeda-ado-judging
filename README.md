@@ -126,6 +126,23 @@ Manual Review
                 }))?;
 ```
 
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/552
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/552
+This PR adds judgment`info.sender == self.ctx.origin && info.sender == self.ctx.previous_sender`
+Fixed this issue
+
 # Issue M-1: the DEFAULTVALIDATOR cannot be changed 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/18 
@@ -226,6 +243,19 @@ Escalations have been resolved successfully!
 
 Escalation status:
 - [cu5t0mPeo](https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/18/#issuecomment-2198239348): accepted
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/558
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/558
+This PR adds the method `execute_update_default_validator()` which modifies the `DEFAULTVALIDATOR` and can only be executed by the `owner`.
+Fixed this issue
 
 # Issue M-2: Permission checks will unnecessarily consume Limited uses 
 
@@ -405,9 +435,26 @@ Escalations have been resolved successfully!
 Escalation status:
 - [gjaldon](https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/27/#issuecomment-2198240164): accepted
 
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/553
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/553
+https://github.com/andromedaprotocol/andromeda-core/pull/569
+PR modified `is_context_permissioned` and `is_context_permissioned_strict()` to execute only once to reduce the number of times
+Fixed this issue
+
+
 # Issue M-3: Valid VFS paths with usernames can always fail validation 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/30 
+
+The protocol has acknowledged this issue.
 
 ## Found by 
 g
@@ -918,6 +965,8 @@ During the discussion in Discord with @gjaldon we reached an agreement that this
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/37 
 
+The protocol has acknowledged this issue.
+
 ## Found by 
 g
 ## Summary
@@ -1035,6 +1084,8 @@ Escalation status:
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/41 
 
+The protocol has acknowledged this issue.
+
 ## Found by 
 J4X\_, Yashar, bin2chen
 ## Summary
@@ -1111,6 +1162,14 @@ Judging by this comment [here](https://github.com/sherlock-audit/2024-05-androme
 
 @gjaldon is right that in `CosmWasm,` contracts can be set upgradeable by the Admin at the beginning. According to the rules, the Admin is expected to take the correct action. It might also mean setting the contracts upgradeable. This is missing as QA in the Readme, so we'll stick to assuming the Admin will make the right decisions.
 
+**cowboy0015**
+
+`withdraw_fund` function is now withdrawing the whole balance instead of manually calculating the rewards to claim. Due to various problems including old version compatibility, unable to set custom withdraw address, etc, there is a possibility where funds can be locked inside the contract. To overcome those unexpected locked funds, `withdraw_fund` is now working as an emergency as its purpose is to send rewards to the recipient set by the owner.
+
+**cowboy0015**
+
+Auto distribution did not happen for the jailed validator in e2e test. Going to upload the video demonstrating the testing process
+
 # Issue M-6: If WithdrawAddrEnabled = false, execute_claim() will fail 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/43 
@@ -1148,7 +1207,7 @@ fn execute_claim(
 If the configuration `WithdrawAddrEnabled` is changed to `false`, setting `DistributionMsg::SetWithdrawAddress` will fail!
 This will prevent the execution of the `claim`
 https://github.com/cosmos/cosmos-sdk/tree/main/x/distribution#msgsetwithdrawaddress
-> # MsgSetWithdrawAddress
+> ### MsgSetWithdrawAddress
 >By default, the withdraw address is the delegator address. To change its withdraw address, a delegator must send a MsgSetWithdrawAddress message. Changing the withdraw address is possible **only if the parameter WithdrawAddrEnabled is set to true.**
 ```rust
 func (k Keeper) SetWithdrawAddr(ctx context.Context, delegatorAddr sdk.AccAddress, withdrawAddr sdk.AccAddress) error
@@ -1222,6 +1281,24 @@ Escalations have been resolved successfully!
 Escalation status:
 - [neko-nyaa](https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/43/#issuecomment-2198193521): accepted
 
+**cowboy0015**
+
+`withdraw_fund` function is now working as an emergency for withdrawing funds (including locked funds due to unexpected cases)
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/559
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/559
+This PR canceled the execution of `SetWithdrawAddress`.
+After the reward is triggered, get back all the balance in the contract via `execute_withdraw_fund()`
+Fixed this issue
+
 # Issue M-7: if Slash Validator occurs, UNSTAKING_QUEUE's unstake amount will not be accurate 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/44 
@@ -1287,6 +1364,27 @@ Manual Review
 ## Recommendation
 
 when the balance is insufficient, only the balance is returned
+
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/551
+
+
+**cowboy0015**
+
+`withdraw_fund` function is now working as an emergency for withdrawing funds (including locked rewards and funds to handle unexpected cases)
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/551
+This PR removes the logic of `execute_withdraw_fund()` to calculate the quantity, and directly withdraws all the balance, solving the problem of `Slash` quantity difference
+
 
 # Issue M-8: is_permissioned() may underflow 
 
@@ -1384,6 +1482,24 @@ only `permissioned_action==true`, then execute `permission.consume_use()`.
                 Ok(())
             }
 ```
+
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/553
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/46
+`PR` changed so that `permission.consume_use()` is executed only if `permissioned_action==true`.
+Also changed so that `consume_use()` no longer returns an error. (Secured by `local_permission.is_permissioned()`.)
+Fixed this issue
 
 # Issue M-9: is_permissioned() It doesn't make sense to have permissions by default after Blacklisted expires. 
 
@@ -1708,6 +1824,19 @@ Escalations have been resolved successfully!
 Escalation status:
 - [J4X-98](https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/47/#issuecomment-2199663504): rejected
 
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/553
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/553
+This PR modifies the blacklist expiration to return `!strict` as expected
+Fixed this issue
+
 # Issue M-10: execute_claim() possible loss of accuracy or even inability to retrieve funds 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/49 
@@ -1793,9 +1922,29 @@ Manual Review
 In case of `WithdrawalType::Percentage`, multiply then divide
 Example: `batch.amount * number_of_claims * release_amount / 1e18
 
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/555
+
+
+**bin2chen66**
+
+
+https://github.com/andromedaprotocol/andromeda-core/pull/555
+This PR modifies `get_amount()` to return Decimal, which improves precision and solves the problem of precision loss.
+At the same time, when creating `execute_create_batch()`, it checks `!release_amount.get_amount(funds.amount)? .is_zero()` to avoid the value being too low
+Fixed this issue
+
 # Issue M-11: Attacker can freeze users first rewards 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/50 
+
+The protocol has acknowledged this issue.
 
 ## Found by 
 J4X\_, Kow, bin2chen
@@ -1953,6 +2102,14 @@ Escalations have been resolved successfully!
 Escalation status:
 - [gjaldon](https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/50/#issuecomment-2198695134): rejected
 
+**cowboy0015**
+
+`withdraw_funds` function is now working as an emergency to handle frozen rewards in the contract. 
+
+**cowboy0015**
+
+Auto distribution did not happen for the jailed validator in e2e test. Going to upload the video demonstrating the testing process
+
 # Issue M-12: Changes of the `UnbondingTime` are not accounted for 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/54 
@@ -2045,6 +2202,27 @@ loop {
 	}
 }
 ```
+
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/551
+
+
+**cowboy0015**
+
+Updated the logic to removed all the expired unstaking requests. Thank you
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/551
+This PR removes the logic of `execute_withdraw_fund()` to calculate the quantity, and directly withdraws all the balance, which solves the problem
+
 
 # Issue M-13: Staked tokens will get stuck after claim 
 
@@ -2154,6 +2332,19 @@ We recommend adapting the `claim_batch()` to revert if `amount_available < amoun
 > From the README description: `Contract owner should be assumed trusted.`
 
 You've deleted an escalation for this issue.
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/554
+
+
+**bin2chen66**
+
+
+https://github.com/andromedaprotocol/andromeda-core/pull/554
+PR removes `stake` logic, avoids possibility of insufficient balance
+This issue has been resolved
 
 # Issue M-14: Lockup of vestings or completion time can be bypassed due to missing check for staked tokens 
 
@@ -2427,6 +2618,19 @@ Although there are differences between the two issues, the main rules we look at
 
 The root cause is the same. Fixing one issue will fix the other. And the impact is the same. So I'll duplicate #58 and #55
 
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/554
+
+
+**bin2chen66**
+
+fix-reviews note:
+ https://github.com/andromedaprotocol/andromeda-core/pull/554
+ PR removed the `stake` logic
+ This issue has been resolved
+
 # Issue M-15: Batch creation will break if vestings are opened to recipients 
 
 Source: https://github.com/sherlock-audit/2024-05-andromeda-ado-judging/issues/59 
@@ -2496,4 +2700,21 @@ fn execute_delegate(
         ContractError::Unauthorized {}
     );
 ```
+
+
+
+## Discussion
+
+**sherlock-admin2**
+
+The protocol team fixed this issue in the following PRs/commits:
+https://github.com/andromedaprotocol/andromeda-core/pull/554
+
+
+**bin2chen66**
+
+fix-reviews note:
+https://github.com/andromedaprotocol/andromeda-core/pull/554
+PR has removed `validator_to_delegate_to`  
+This issue has been resolved
 
